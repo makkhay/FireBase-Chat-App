@@ -1,0 +1,547 @@
+From 5b6e4f00b101bfdd345d7f173c0fce5906b24abb Mon Sep 17 00:00:00 2001
+From: Prakash Gurung <makkhay@gmail.com>
+Date: Tue, 6 Mar 2018 17:50:29 -0800
+Subject: [PATCH] completed asg
+
+---
+ app/google-services.json                           |  22 ++---
+ app/src/main/AndroidManifest.xml                   |   6 ++
+ .../java/edu/sfsu/csc780/chathub/ImageUtil.java    |   2 +-
+ .../edu/sfsu/csc780/chathub/LocationUtils.java     | 107 +++++++++++++++++++++
+ .../java/edu/sfsu/csc780/chathub/MapLoader.java    |  63 ++++++++++++
+ .../edu/sfsu/csc780/chathub/ui/MainActivity.java   |  81 +++++++++++++++-
+ .../ic_location_searching_black_24dp.png           | Bin 0 -> 1152 bytes
+ app/src/main/res/drawable/button_ripple.xml        |   7 ++
+ app/src/main/res/layout/activity_main.xml          |  13 +++
+ local.properties                                   |   5 +-
+ 10 files changed, 288 insertions(+), 18 deletions(-)
+ create mode 100644 app/src/main/java/edu/sfsu/csc780/chathub/LocationUtils.java
+ create mode 100644 app/src/main/java/edu/sfsu/csc780/chathub/MapLoader.java
+ create mode 100644 app/src/main/res/drawable-xxxhdpi/ic_location_searching_black_24dp.png
+ create mode 100644 app/src/main/res/drawable/button_ripple.xml
+
+diff --git a/app/google-services.json b/app/google-services.json
+index fd5ec84..53fc00c 100644
+--- a/app/google-services.json
++++ b/app/google-services.json
+@@ -1,35 +1,35 @@
+ {
+   "project_info": {
+-    "project_number": "",
+-    "firebase_url": "",
+-    "project_id": "",
+-    "storage_bucket": ""
++    "project_number": "390330034956",
++    "firebase_url": "https://chathub-project-b7717.firebaseio.com",
++    "project_id": "chathub-project-b7717",
++    "storage_bucket": "chathub-project-b7717.appspot.com"
+   },
+   "client": [
+     {
+       "client_info": {
+-        "mobilesdk_app_id": "",
++        "mobilesdk_app_id": "1:390330034956:android:123c68aba501e686",
+         "android_client_info": {
+           "package_name": "edu.sfsu.csc780.chathub"
+         }
+       },
+       "oauth_client": [
+         {
+-          "client_id": "",
++          "client_id": "390330034956-4vq0ttmian0vebid0hguh7lc9bjjggjg.apps.googleusercontent.com",
+           "client_type": 1,
+           "android_info": {
+             "package_name": "edu.sfsu.csc780.chathub",
+-            "certificate_hash": ""
++            "certificate_hash": "cd09647a8b6507a9d5e9e5c64b40ee93a502fc33"
+           }
+         },
+         {
+-          "client_id": "",
++          "client_id": "390330034956-ouch8r78rtermq9plg69sch6t46910a8.apps.googleusercontent.com",
+           "client_type": 3
+         }
+       ],
+       "api_key": [
+         {
+-          "current_key": ""
++          "current_key": "AIzaSyA-VgepK0ED8sTtrQCWGWkjjN740Fam_DA"
+         }
+       ],
+       "services": {
+@@ -40,7 +40,7 @@
+           "status": 2,
+           "other_platform_oauth_client": [
+             {
+-              "client_id": "",
++              "client_id": "390330034956-ouch8r78rtermq9plg69sch6t46910a8.apps.googleusercontent.com",
+               "client_type": 3
+             }
+           ]
+@@ -52,4 +52,4 @@
+     }
+   ],
+   "configuration_version": "1"
+-}
++}
+\ No newline at end of file
+diff --git a/app/src/main/AndroidManifest.xml b/app/src/main/AndroidManifest.xml
+index 3916db7..8533880 100644
+--- a/app/src/main/AndroidManifest.xml
++++ b/app/src/main/AndroidManifest.xml
+@@ -2,6 +2,12 @@
+ <manifest xmlns:android="http://schemas.android.com/apk/res/android"
+     package="edu.sfsu.csc780.chathub">
+ 
++    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION"/>
++    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION"/>
++    <meta-data
++        android:name="com.google.android.geo.API_KEY"
++        android:value="AIzaSyC8_qF7pErepJrVDJcrCbWEpXAzuP-yXDE" />
++
+     <application
+         android:allowBackup="true"
+         android:icon="@mipmap/ic_launcher"
+diff --git a/app/src/main/java/edu/sfsu/csc780/chathub/ImageUtil.java b/app/src/main/java/edu/sfsu/csc780/chathub/ImageUtil.java
+index f714596..e7ce4f5 100644
+--- a/app/src/main/java/edu/sfsu/csc780/chathub/ImageUtil.java
++++ b/app/src/main/java/edu/sfsu/csc780/chathub/ImageUtil.java
+@@ -47,7 +47,7 @@ public class ImageUtil {
+         }
+     }
+ 
+-    public static Uri savePhotoImage(Bitmap imageBitmap, Context context) {
++    public static Uri savePhotoImage(Context context, Bitmap imageBitmap) {
+         File photoFile = null;
+         try {
+             photoFile = createImageFile(context);
+diff --git a/app/src/main/java/edu/sfsu/csc780/chathub/LocationUtils.java b/app/src/main/java/edu/sfsu/csc780/chathub/LocationUtils.java
+new file mode 100644
+index 0000000..9412c67
+--- /dev/null
++++ b/app/src/main/java/edu/sfsu/csc780/chathub/LocationUtils.java
+@@ -0,0 +1,107 @@
++package edu.sfsu.csc780.chathub;
++
++import android.app.Activity;
++import android.content.Context;
++import android.content.pm.PackageManager;
++import android.location.Location;
++import android.location.LocationListener;
++import android.location.LocationManager;
++import android.os.Bundle;
++import android.support.v4.app.ActivityCompat;
++import android.util.Log;
++import android.Manifest;
++
++/**
++ * Created by makkhay on 3/4/18.
++ */
++
++public class LocationUtils {
++
++
++    private static final String LOG_TAG = "LocationUtils";
++    public static final int REQUEST_CODE = 100;
++    private static final long MIN_TIME = 1;
++    private static final float MIN_DISTANCE =10 ;
++    private static String FINE_LOCATION = Manifest.permission.ACCESS_FINE_LOCATION;
++    private static String COARSE_LOCATION = Manifest.permission.ACCESS_COARSE_LOCATION;
++    private static int GRANTED = PackageManager.PERMISSION_GRANTED;
++    private static final String[] LOCATION_PERMISSIONS =
++            {FINE_LOCATION, COARSE_LOCATION};
++    private static Location sLocation;
++    private static LocationListener sLocationListener;
++
++
++    private static Context context;
++    public LocationUtils(Context context){
++       this.context = context;
++     }
++
++    
++
++    public static double getLat() {
++        return (sLocation != null) ? sLocation.getLatitude() : 0.0;
++    }
++
++    public static double getLon() {
++        return (sLocation != null) ? sLocation.getLongitude() : 0.0;
++    }
++
++
++    public static double startLocationUpdates() {
++
++
++
++            // Acquire a reference to the system Location Manager
++            LocationManager locationManager =
++                    (LocationManager) context.getApplicationContext().getSystemService(Context.LOCATION_SERVICE);
++
++            if (sLocationListener == null) {
++// Define a listener that responds to location updates
++                sLocationListener = new LocationListener() {
++                    public void onLocationChanged(Location location) {
++                        Log.d(LOG_TAG, "lat: " + location.getLatitude()
++                                + " lon: " + location.getLongitude());
++                        sLocation = location;
++                    }
++
++                    public void onStatusChanged(String provider, int status, Bundle
++                            extras) {
++                    }
++
++                    public void onProviderEnabled(String provider) {
++                    }
++
++                    public void onProviderDisabled(String provider) {
++                    }
++                };
++            }
++
++            if (ActivityCompat.checkSelfPermission(context.getApplicationContext(), FINE_LOCATION) !=
++                    GRANTED && ActivityCompat.checkSelfPermission(context.getApplicationContext(),
++                    COARSE_LOCATION) != GRANTED) {
++                {
++                    Log.d(LOG_TAG, "requesting permissions for starting");
++                    ActivityCompat.requestPermissions((Activity) context, LOCATION_PERMISSIONS, REQUEST_CODE);
++                }
++            }
++            Log.d(LOG_TAG, "requesting updates");
++
++            Location location =
++                    locationManager.getLastKnownLocation(LocationManager.GPS_PROVIDER);
++            if (location != null) {
++                Log.d(LOG_TAG, "last known lat: " + location.getLatitude()
++                        + " lon: " + location.getLongitude());
++                sLocation = location;
++            }
++
++            Log.d(LOG_TAG, "requesting updates");
++            locationManager.requestLocationUpdates(LocationManager.NETWORK_PROVIDER, MIN_TIME,
++                    MIN_DISTANCE, sLocationListener);
++
++
++            return GRANTED;
++
++        }
++
++
++}
+diff --git a/app/src/main/java/edu/sfsu/csc780/chathub/MapLoader.java b/app/src/main/java/edu/sfsu/csc780/chathub/MapLoader.java
+new file mode 100644
+index 0000000..db651d0
+--- /dev/null
++++ b/app/src/main/java/edu/sfsu/csc780/chathub/MapLoader.java
+@@ -0,0 +1,63 @@
++package edu.sfsu.csc780.chathub;
++
++import android.content.Context;
++import android.graphics.Bitmap;
++import android.graphics.BitmapFactory;
++import android.support.v4.content.AsyncTaskLoader;
++import android.util.Log;
++
++import java.io.BufferedInputStream;
++import java.io.IOException;
++import java.io.InputStream;
++import java.net.HttpURLConnection;
++import java.net.MalformedURLException;
++import java.net.URL;
++
++/**
++ * Created by makkhay on 3/4/18.
++ */
++
++public class MapLoader extends AsyncTaskLoader {
++
++    private static final String LOG_TAG = "MapLoader";
++
++    public MapLoader(Context context) {
++        super(context);
++    }
++
++    @Override
++    public Object loadInBackground() {
++        double lat = LocationUtils.getLat();
++        double lon = LocationUtils.getLon();
++        StringBuilder urlBuilder = new StringBuilder("http://maps.google" +
++                ".com/maps/api/staticmap?center=");
++        urlBuilder.append(lat);
++        urlBuilder.append(",");
++        urlBuilder.append(lon);
++        urlBuilder.append("&zoom=15&size=400x300");
++        urlBuilder.append("&markers=color:blue%7Clabel:A%7C");
++        urlBuilder.append(lat);
++        urlBuilder.append(",");
++        urlBuilder.append(lon);
++        Log.d(LOG_TAG, "map url:" + urlBuilder.toString());
++
++        Bitmap bmp = null;
++        HttpURLConnection urlConnection = null;
++        try {
++            URL url = new URL(urlBuilder.toString());
++            urlConnection = (HttpURLConnection) url.openConnection();
++            InputStream in = new BufferedInputStream(urlConnection.getInputStream());
++            bmp = BitmapFactory.decodeStream(in);
++            in.close();
++        } catch (MalformedURLException e) {
++            e.printStackTrace();
++        } catch (IOException e) {
++            e.printStackTrace();
++        } finally {
++            urlConnection.disconnect();
++        }
++        return bmp;
++
++
++    }
++}
+diff --git a/app/src/main/java/edu/sfsu/csc780/chathub/ui/MainActivity.java b/app/src/main/java/edu/sfsu/csc780/chathub/ui/MainActivity.java
+index dae6cd1..18c4dda 100644
+--- a/app/src/main/java/edu/sfsu/csc780/chathub/ui/MainActivity.java
++++ b/app/src/main/java/edu/sfsu/csc780/chathub/ui/MainActivity.java
+@@ -18,12 +18,15 @@ package edu.sfsu.csc780.chathub.ui;
+ import android.app.Activity;
+ import android.content.Intent;
+ import android.content.SharedPreferences;
++import android.content.pm.PackageManager;
+ import android.graphics.Bitmap;
+ import android.net.Uri;
+ import android.os.Bundle;
+ import android.preference.PreferenceManager;
+ import android.support.annotation.NonNull;
+ import android.support.design.widget.FloatingActionButton;
++import android.support.v4.app.LoaderManager;
++import android.support.v4.content.Loader;
+ import android.support.v7.app.AppCompatActivity;
+ import android.support.v7.widget.LinearLayoutManager;
+ import android.support.v7.widget.RecyclerView;
+@@ -52,14 +55,19 @@ import com.google.firebase.storage.StorageReference;
+ import com.google.firebase.storage.UploadTask;
+ 
+ import edu.sfsu.csc780.chathub.ImageUtil;
++import edu.sfsu.csc780.chathub.LocationUtils;
++import edu.sfsu.csc780.chathub.MapLoader;
+ import edu.sfsu.csc780.chathub.R;
+ import edu.sfsu.csc780.chathub.model.ChatMessage;
+ 
++import static edu.sfsu.csc780.chathub.ImageUtil.scaleImage;
++
+ public class MainActivity extends AppCompatActivity
+         implements GoogleApiClient.OnConnectionFailedListener ,MessageUtil.MessageLoadListener{
+ 
+     private static final int REQUEST_PICK_IMAGE = 1;
+     private ImageButton mImageButton;
++    private ImageButton locationButton;
+ 
+     @Override
+     public void onLoadComplete() {
+@@ -85,6 +93,8 @@ public class MainActivity extends AppCompatActivity
+     // Firebase instance variables
+     private FirebaseAuth mAuth;
+     private FirebaseUser mUser;
++    private MapLoader mapLoader;
++    LocationUtils locationUtils;
+ 
+     private FirebaseRecyclerAdapter<ChatMessage, MessageUtil.MessageViewHolder> mFirebaseAdapter;
+ 
+@@ -92,6 +102,8 @@ public class MainActivity extends AppCompatActivity
+     protected void onCreate(Bundle savedInstanceState) {
+         super.onCreate(savedInstanceState);
+         setContentView(R.layout.activity_main);
++        mapLoader = new MapLoader(this);
++        locationUtils = new LocationUtils(this);
+         mSharedPreferences = PreferenceManager.getDefaultSharedPreferences(this);
+         // Set default username is anonymous.
+         mUsername = ANONYMOUS;
+@@ -173,6 +185,52 @@ public class MainActivity extends AppCompatActivity
+                 pickImage();
+             }
+         });
++
++        locationButton = (ImageButton) findViewById(R.id.locationButton);
++        locationButton.setOnClickListener(new View.OnClickListener() {
++            @Override
++            public void onClick(View v) {
++                loadMap();
++            }
++        });
++
++
++
++
++
++
++    }
++
++    private void loadMap() {
++
++        Loader<Bitmap> loader = getSupportLoaderManager().initLoader(0, null,
++                new LoaderManager.LoaderCallbacks<Bitmap>() {
++                    @Override
++                    public Loader<Bitmap> onCreateLoader(final int id, final Bundle args) {
++                        return mapLoader;
++                    }
++                    @Override
++                    public void onLoadFinished(final Loader<Bitmap> loader, final Bitmap result) {
++
++                        mProgressBar.setVisibility(ProgressBar.INVISIBLE);
++                        locationButton.setEnabled(true);
++                        if (result == null) return;
++// Resize if too big for messaging
++                        Bitmap resizedBitmap = scaleImage(result);
++                        Uri uri = null;
++                        if (result != resizedBitmap) {
++                            uri = ImageUtil.savePhotoImage(getApplicationContext(),resizedBitmap);
++                        } else {
++                            uri = ImageUtil.savePhotoImage(getApplicationContext(),result );
++                        }
++                        createImageMessage(uri);
++                    }
++                    @Override
++                    public void onLoaderReset(final Loader<Bitmap> loader) {
++                    }
++                });
++            loader.forceLoad();
++
+     }
+ 
+     @Override
+@@ -188,8 +246,12 @@ public class MainActivity extends AppCompatActivity
+     }
+ 
+     @Override
+-    public void onResume() {
++    public void onResume()
++    {
++        LocationUtils.startLocationUpdates();
++
+         super.onResume();
++
+     }
+ 
+     @Override
+@@ -251,9 +313,9 @@ public class MainActivity extends AppCompatActivity
+                 Log.i(TAG, "Uri: " + uri.toString());
+                 // Resize if too big for messaging
+                 Bitmap bitmap = ImageUtil.getBitmapForUri(uri, this);
+-                Bitmap resizedBitmap = ImageUtil.scaleImage(bitmap);
++                Bitmap resizedBitmap = scaleImage(bitmap);
+                 if (bitmap != resizedBitmap) {
+-                    uri = ImageUtil.savePhotoImage(resizedBitmap, this);
++                    uri = ImageUtil.savePhotoImage(this, resizedBitmap);
+                 }
+                 createImageMessage(uri);
+             } else {
+@@ -284,4 +346,17 @@ public class MainActivity extends AppCompatActivity
+             }
+         });
+     }
++
++
++    @Override
++    public void onRequestPermissionsResult(int requestCode,
++                                           String permissions[],
++                                           int[] grantResults) {
++        boolean isGranted = (grantResults.length > 0
++                && grantResults[0] == PackageManager.PERMISSION_GRANTED);
++        if (isGranted && requestCode == LocationUtils.REQUEST_CODE) {
++            LocationUtils.startLocationUpdates();
++        }
++    }
++
+ }
+diff --git a/app/src/main/res/drawable-xxxhdpi/ic_location_searching_black_24dp.png b/app/src/main/res/drawable-xxxhdpi/ic_location_searching_black_24dp.png
+new file mode 100644
+index 0000000000000000000000000000000000000000..78f92054a21ddf2d89854528032b901e2655b59e
+GIT binary patch
+literal 1152
+zcmV-`1b_R9P)<h;3K|Lk000e1NJLTq003YB003YJ1ONa4NRhv@000C>Nkl<ZcmeI(
+zZ)jCz9KiAK-MzZGKWa<1VUAI2%l?RK1r@^}6l^MmvJxdH7FyB^1)&6Em0%H3Oe|?>
+zy0kTvNx=p)9c>j+ELTQQHpTwXi)vPk>9p<M`^(qAr^D@@^PFclIG^upe-A&=2hTZ^
+zNF)-HF4g~zsB%QKK<<kch!%(zD5jn@h-wY>6p_;^Xl6gd2;L2|pLLXzW3FK{1Ei4u
+zSc(sMoLS_Ao7l@m#7ASiMh#P{io>Lk0HtWBk|{BRm$-sh=rX$~z_EK7Ml5!Q2As)b
+zCuziTDO!l(Kq<$O4E;zit!!fxYp=G6ZM1TnpO6goFq@Fg<6FeDOT0@n^YBv1dO8_L
+zJo|>Zgs9g0cag8yKna;a36F9b@#qI`BqUY*;&JF8%gELWPI*lGnMy)X=5g=*!A4^E
+zk;i8KM9lb(IaoHG&k!>{po}0Y=tIo-galT-ju@rcL5!gCXd#Uly^2Mv5u*v#V9O&+
+zAVw>(q>KxQ>IzG-X&HYbs$VI^iX(_B#VTxjh!mnaga!8@Mo$ukEr`)Q1U87MIta^A
+z^EM)&Rfy^=#e`)h=MmL%0x@s@C4{LFQS}qRU5M%kVLOJX7UJ96YE+UN2wRPD8@1t6
+zKBH>XVO;1`r(Pg|FApNB1-MX$sP4y?18U3=uIQ(QH}FMYX<Kk*oAJ+UA1V=56|Phx
+zs&cZ{q(+>_CH?6709kuRjd%-}+STb#leKr$h^@G!{}vp`{=4q)YD6P0tuUSqx>N?q
+zP%SRaM>3T40%f>VVSj-_Tq?4^KpdCi_7|9mOSA1Sa2+mH+Fzg!m+G@$ph@+m`UR_T
+zX{|c_3z}3J?NuXMaOrt<`tIOwX}WQ#SDn6@tSwd}Mv3D}f-!aaBC=M@q#ANJt~3~L
+zVhix$b2X+FSN5orKf;$?YRqpWaA6uFb}o?H5mgf|JdCJr#;0N2zn6&dwejiIx0XP!
+zT5Y|JdJ5mljUVUup6P_CfOE#j^HQ4+*TN3M^em!kBarzdjXSxHu-s{UDVw00fc9a2
+z;wT{uvoJqz>>;qZTtrmeB(N<(FQOWy3=6g*MhCGg#v#P$39QKDQ^cr^JZy=x4>1}b
+zh9xzOB1Xr^$A$vlM~wdBdMsLrU^YZGLDg~^F-o%>%U(b*8>N{bHZX=@_8iv5IEegf
+z{oH~dxAC#Z#5V~=ocBBqOwz%vWMcuHq&%i|5ho<m=s-M5bAojgkx4P@=_8GJ)J}pB
+z#n_GD-6c-2od!zLN@-v_CmBcZ?iFH$?lCSS85?1U0lKd?zz`!y#>Q#Jk$Q#^%bj5%
+z4$a_Yl8B`yd65E~yMunjLVeURWg0n!1Za?@Ou0pLG3n!v%~2Z28FSb~9}@_fo8TlH
+zxt1JM$P#wa!#R?OD#=-T*vVoFA@}7Ys(f-^^j{I91)>F_1)>G)X;MWZx#=I8l0gO>
+S*ZzM10000<MNUMnLSTa8rxdgR
+
+literal 0
+HcmV?d00001
+
+diff --git a/app/src/main/res/drawable/button_ripple.xml b/app/src/main/res/drawable/button_ripple.xml
+new file mode 100644
+index 0000000..7547f1b
+--- /dev/null
++++ b/app/src/main/res/drawable/button_ripple.xml
+@@ -0,0 +1,7 @@
++<ripple xmlns:android="http://schemas.android.com/apk/res/android"
++    xmlns:tools="http://schemas.android.com/tools"
++    android:color="?android:colorAccent"
++    tools:targetApi="lollipop">
++    <item android:id="@android:id/mask"
++        android:drawable="@android:color/white" />
++</ripple>
+\ No newline at end of file
+diff --git a/app/src/main/res/layout/activity_main.xml b/app/src/main/res/layout/activity_main.xml
+index 68ad120..5147f8f 100644
+--- a/app/src/main/res/layout/activity_main.xml
++++ b/app/src/main/res/layout/activity_main.xml
+@@ -40,6 +40,16 @@
+                 android:layout_width="0dp"
+                 android:layout_height="0dp"
+                 android:layout_weight="1"/>
++
++            <ImageButton
++                android:id="@+id/locationButton"
++                android:layout_width="wrap_content"
++                android:layout_height="wrap_content"
++                android:src="@drawable/ic_location_searching_black_24dp"
++                android:background="@drawable/button_ripple"
++                android:padding="16dp"
++                android:layout_gravity="center"
++                />
+             <ImageButton
+                 android:id="@+id/shareImageButton"
+                 android:src="@drawable/ic_image_black_24px"
+@@ -53,6 +63,9 @@
+                 android:layout_height="wrap_content"
+                 android:layout_width="wrap_content"
+                 android:src="@drawable/ic_send_black_24"/>
++
++
++
+         </LinearLayout>
+ 
+     </LinearLayout>
+diff --git a/local.properties b/local.properties
+index 989e9e3..be46278 100644
+--- a/local.properties
++++ b/local.properties
+@@ -7,6 +7,5 @@
+ # Location of the SDK. This is only used by Gradle.
+ # For customization when using a Version Control System, please read the
+ # header note.
+-#Sat Feb 17 14:17:45 PST 2018
+-ndk.dir=/Users/cjkriese/Library/Android/sdk/ndk-bundle
+-sdk.dir=/Users/cjkriese/Library/Android/sdk
++#Sun Mar 04 20:43:50 PST 2018
++sdk.dir=/Users/makkhay/Library/Android/sdk
+-- 
+2.14.3 (Apple Git-98)
+

@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="default_web_client_id" translatable="false">390330034956-ouch8r78rtermq9plg69sch6t46910a8.apps.googleusercontent.com</string>
+    <string name="firebase_database_url" translatable="false">https://chathub-project-b7717.firebaseio.com</string>
+    <string name="gcm_defaultSenderId" translatable="false">390330034956</string>
+    <string name="google_api_key" translatable="false">AIzaSyA-VgepK0ED8sTtrQCWGWkjjN740Fam_DA</string>
+    <string name="google_app_id" translatable="false">1:390330034956:android:123c68aba501e686</string>
+    <string name="google_crash_reporting_api_key" translatable="false">AIzaSyA-VgepK0ED8sTtrQCWGWkjjN740Fam_DA</string>
+    <string name="google_storage_bucket" translatable="false">chathub-project-b7717.appspot.com</string>
+    <string name="project_id" translatable="false">chathub-project-b7717</string>
+</resources>
